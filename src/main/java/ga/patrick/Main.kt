@@ -10,8 +10,8 @@ class Main {
         private var statmt: Statement? = null
 
         private const val url = "jdbc:oracle:thin:@oraclebi.avalon.ru:1521:orcl12"
-        private const val login = "kirniki"
-        private const val password = "kirniki"
+        private var login: String? = null
+        private var password: String ?= null
 
         private const val ERROR_OUT: String = "При (%s) получено '%s', ожидалось '%s'"
         private const val SELECT_FILE: String = "select.sql"
@@ -20,6 +20,14 @@ class Main {
         @JvmStatic
         fun main(args: Array<String>) {
             println("Подключение...")
+
+            if (args.size == 2) {
+                login = args[0]
+                password = args[1]
+            } else {
+                println("При запуске введите логин и пароль к своему аккаунту.")
+                return
+            }
 
             Class.forName("oracle.jdbc.driver.OracleDriver")
             conn = DriverManager.getConnection(url, login, password)
@@ -37,7 +45,7 @@ class Main {
 
             if (flag2)
                 testsFile.writeText(
-                        "-- Формат: стока1;строка2;...;строкаN;нужное_значение\n" +
+                        "-- Формат: строка1;строка2;...;строкаN;нужное_значение\n" +
                                 "// Комменты, начинающиеся с '//', выведутся при запуске\n" +
                                 "-- Сработает на дефолтном запросе:\n" +
                                 "26.09.2018;26.10.2018;1\n" +
@@ -81,12 +89,13 @@ class Main {
 
 
         @Throws(Exception::class)
-        fun check(sql: String, vals: Array<out String>, expected: String): Boolean {
+        fun check(sql: String, vals: Array<String>, expected: String): Boolean {
 
             var result: String? = null
-            var s: String = ""
+            var s = ""
             try {
-                s = sql.format("26.09.2018", "26.10.2018")// vals)
+
+                s = replaceVars(sql, vals)
                 val resultSet = statmt!!.executeQuery(s)
 
                 resultSet.next()
@@ -98,6 +107,16 @@ class Main {
             }
 
             throw Exception(String.format(ERROR_OUT, arrToString(vals), result, expected))
+        }
+
+        private fun replaceVars(sql: String, vals: Array<String>): String {
+            var i = 0
+            var s = sql
+            while (sql.contains("%s") and (i < vals.size)) {
+                s = s.replaceFirst("%s", vals[i])
+                i++
+            }
+            return s
         }
 
         private fun readFile(fileName: String): String = File(fileName).readText(Charsets.UTF_8)
