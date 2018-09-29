@@ -11,9 +11,11 @@ class Main {
 
         private const val url = "jdbc:oracle:thin:@oraclebi.avalon.ru:1521:orcl12"
         private var login: String? = null
-        private var password: String ?= null
+        private var password: String? = null
 
-        private const val ERROR_OUT: String = "При (%s) получено '%s', ожидалось '%s'"
+        private const val ERROR_OUT = "При (%s) \t получено'%11s', \tожидалось   \t'%10s'"
+        private const val CORRECT_OUT = "Верно: (%s) -> '%s'"
+
         private const val SELECT_FILE: String = "select.sql"
         private const val TESTS_FILE: String = "tests.txt"
 
@@ -81,32 +83,25 @@ class Main {
         }
 
         private fun test(sql: String, inp: List<String>) =
-                try {
-                    check(sql, inp.subList(0, inp.size - 1).toTypedArray(), inp.last())
-                } catch (e: Exception) {
-                    println("> " + e.message)
-                }
+                println(check(sql, inp.subList(0, inp.size - 1).toTypedArray(), inp.last()))
 
 
         @Throws(Exception::class)
-        fun check(sql: String, vals: Array<String>, expected: String): Boolean {
-
-            var result: String? = null
-            var s = ""
+        fun check(sql: String, vals: Array<String>, expected: String): String {
+            var s : String? = null
             try {
-
                 s = replaceVars(sql, vals)
                 val resultSet = statmt!!.executeQuery(s)
 
                 resultSet.next()
-                result = resultSet.getString(1)
-                if (result == expected) return true
-            } catch (e: Exception) {
-                println("Ошибка при обработке: \n\t$s")
-                e.printStackTrace()
-            }
+                val result = resultSet.getString(1)
 
-            throw Exception(String.format(ERROR_OUT, arrToString(vals), result, expected))
+                return String.format(if (result == expected) CORRECT_OUT else ERROR_OUT,
+                        arrToString(vals), result, expected)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return "Ошибка при обработке: \n\t$s"
+            }
         }
 
         private fun replaceVars(sql: String, vals: Array<String>): String {
@@ -121,10 +116,10 @@ class Main {
 
         private fun readFile(fileName: String): String = File(fileName).readText(Charsets.UTF_8)
 
-        private fun arrToString(arr: Array<out Any>) : String {
+        private fun arrToString(arr: Array<out Any>): String {
             var s = ""
             for (i in arr) s += "$i, "
-            return s
+            return s.substring(0, s.length - 2)
         }
     }
 }
